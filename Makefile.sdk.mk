@@ -89,6 +89,9 @@ ifeq ($(enable_diet), 0)
 	v8 := build/fs-%/lib/pkgconfig/v8.pc
 endif
 
+ifneq ($(iconv),)
+	glib_iconv_option := -Diconv=native
+endif
 
 all: build/sdk-$(host_platform)-$(host_arch).tar.bz2
 	@echo ""
@@ -364,7 +367,7 @@ $(eval $(call make-git-autotools-module-rules,libunwind,build/fs-%/lib/pkgconfig
 
 $(eval $(call make-git-autotools-module-rules,libffi,build/fs-%/lib/pkgconfig/libffi.pc,))
 
-$(eval $(call make-git-autotools-module-rules,glib,build/fs-%/lib/pkgconfig/glib-2.0.pc,build/fs-%/lib/pkgconfig/libffi.pc $(iconv) build/fs-%/lib/libz.a))
+$(eval $(call make-git-meson-module-rules,glib,build/fs-%/lib/pkgconfig/glib-2.0.pc,build/fs-%/lib/pkgconfig/libffi.pc $(iconv) build/fs-%/lib/libz.a,$(glib_iconv_option)))
 
 build/.openssl-stamp:
 	$(RM) -r openssl
