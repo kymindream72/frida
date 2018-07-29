@@ -34,6 +34,22 @@ else
 endif
 host_platform_arch := $(host_platform)-$(host_arch)
 
+ifeq ($(host_platform), macos)
+	iconv := yes
+endif
+ifeq ($(host_platform), ios)
+	iconv := yes
+endif
+ifeq ($(host_platform), android)
+	iconv := yes
+endif
+ifeq ($(host_platform), qnx)
+	iconv := yes
+endif
+ifeq ($(iconv),yes)
+	glib_iconv_option := -Diconv=native
+endif
+
 ifeq ($(host_platform), linux)
 strip_all := --strip-all
 endif
@@ -219,11 +235,11 @@ build/ft-%/bin/libtool: build/ft-env-%.rc build/ft-tmp-%/libtool/Makefile
 
 $(eval $(call make-tarball-module-rules,gettext,https://gnuftp.uib.no/gettext/gettext-$(gettext_version).tar.gz,build/ft-%/bin/autopoint,build/ft-%/bin/libtool,gettext-vasnprintf-apple-fix.patch))
 
-$(eval $(call make-git-meson-module-rules,glib,build/ft-%/bin/glib-genmarshal,build/ft-%/bin/autopoint))
+$(eval $(call make-git-meson-module-rules,glib,build/ft-%/bin/glib-genmarshal,build/ft-%/bin/autopoint,$(glib_iconv_option)))
 
 $(eval $(call make-tarball-module-rules,pkg-config,https://pkgconfig.freedesktop.org/releases/pkg-config-$(pkg_config_version).tar.gz,build/ft-%/bin/pkg-config,build/ft-%/bin/glib-genmarshal,pkg-config-static-glib.patch))
 
-$(eval $(call make-git-meson-module-rules,vala,build/ft-%/bin/valac,build/ft-%/bin/glib-genmarshal))
+$(eval $(call make-git-meson-module-rules,vala,build/ft-%/bin/valac,build/ft-%/bin/glib-genmarshal,))
 
 build/ft-%/bin/dpkg-deb:
 	@mkdir -p $(@D)
