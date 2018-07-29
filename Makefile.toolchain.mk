@@ -152,35 +152,32 @@ $3: build/ft-env-%.rc build/ft-tmp-%/$1/Makefile
 	@touch $$@
 endef
 
-define make-git-module-rules
+define make-git-meson-module-rules
 build/.$1-stamp:
 	$(RM) -r $1
 	git clone $(repo_base_url)/$1$(repo_suffix)
 	@mkdir -p $$(@D)
 	@touch $$@
 
-$1/configure: build/ft-env-$(build_platform_arch).rc build/.$1-stamp
-	. $$< \
-		&& cd $$(@D) \
-		&& toolchain=$$(shell pwd)/build/ft-toolchain-$$(build_platform_arch) \
-		&& export ACLOCAL_FLAGS="-I $$$$toolchain/share/aclocal" \
-		&& export ACLOCAL="aclocal -I $$$$toolchain/share/aclocal" \
-		&& [ -f autogen.sh ] && NOCONFIGURE=1 ./autogen.sh || autoreconf -ifv
-
-build/ft-tmp-%/$1/Makefile: build/ft-env-%.rc $1/configure $3
+build/ft-tmp-%/$1/build.ninja: build/ft-env-$(build_platform_arch).rc build/ft-env-%.rc build/.$1-stamp $3 releng/meson/meson.py
 	$(RM) -r $$(@D)
-	mkdir -p $$(@D)
-	. $$< && cd $$(@D) && PATH=$$(shell pwd)/build/ft-$$*/bin:$$$$PATH ../../../$1/configure
+	(. build/ft-meson-env-$(build_platform_arch).rc \
+		&& . build/ft-config-$$*.site \
+		&& $(MESON) \
+			--prefix $$$$frida_prefix \
+			--libdir $$$$frida_prefix/lib \
+			--default-library static \
+			--buildtype minsize \
+			--cross-file build/ft-$$*.txt \
+			$4 \
+			$$(@D) \
+			$1)
 
-$2: build/ft-env-%.rc build/ft-tmp-%/$1/Makefile
-	. $$< \
-		&& cd build/ft-tmp-$$*/$1 \
-		&& export PATH=$$(shell pwd)/build/ft-$$*/bin:$$$$PATH \
-		&& make $(MAKE_J) GLIB_GENMARSHAL=glib-genmarshal GLIB_MKENUMS=glib-mkenums \
-		&& make $(MAKE_J) GLIB_GENMARSHAL=glib-genmarshal GLIB_MKENUMS=glib-mkenums LN="ln -sf" install
+$2: build/ft-env-%.rc build/ft-tmp-%/$1/build.ninja
+	(. $$< \
+		&& $(NINJA) -C build/ft-tmp-$$*/$1 install)
 	@touch $$@
 endef
-
 
 $(eval $(call make-tarball-module-rules,m4,https://gnuftp.uib.no/m4/m4-$(m4_version).tar.gz,build/ft-%/bin/m4,,m4-vasnprintf-apple-fix.patch))
 
@@ -217,11 +214,11 @@ build/ft-%/bin/libtool: build/ft-env-%.rc build/ft-tmp-%/libtool/Makefile
 
 $(eval $(call make-tarball-module-rules,gettext,https://gnuftp.uib.no/gettext/gettext-$(gettext_version).tar.gz,build/ft-%/bin/autopoint,build/ft-%/bin/libtool,gettext-vasnprintf-apple-fix.patch))
 
-$(eval $(call make-git-module-rules,glib,build/ft-%/bin/glib-genmarshal,build/ft-%/bin/autopoint))
+$(eval $(call make-git-meson-module-rules,glib,build/ft-%/bin/glib-genmarshal,build/ft-%/bin/autopoint))
 
 $(eval $(call make-tarball-module-rules,pkg-config,https://pkgconfig.freedesktop.org/releases/pkg-config-$(pkg_config_version).tar.gz,build/ft-%/bin/pkg-config,build/ft-%/bin/glib-genmarshal,pkg-config-static-glib.patch))
 
-$(eval $(call make-git-module-rules,vala,build/ft-%/bin/valac,build/ft-%/bin/glib-genmarshal))
+$(eval $(call make-git-meson-module-rules,vala,build/ft-%/bin/valac,build/ft-%/bin/glib-genmarshal))
 
 build/ft-%/bin/dpkg-deb:
 	@mkdir -p $(@D)

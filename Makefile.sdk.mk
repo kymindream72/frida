@@ -280,7 +280,7 @@ build/fs-tmp-%/$1/build.ninja: build/fs-env-$(build_platform_arch).rc build/fs-e
 
 $2: build/fs-env-%.rc build/fs-tmp-%/$1/build.ninja
 	(. $$< \
-		&& ninja -C build/fs-tmp-$$*/$1 install)
+		&& $(NINJA) -C build/fs-tmp-$$*/$1 install)
 	@touch $$@
 endef
 
