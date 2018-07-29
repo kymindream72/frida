@@ -2,13 +2,12 @@ include config.mk
 
 MAKE_J ?= -j 8
 
-repo_base_url := "git://github.com/frida"
+repo_base_url = "https://github.com/frida"
 repo_suffix := ".git"
 
-zlib_version := 1.2.11
-libiconv_version := 1.14
-elfutils_version := 0.170
-libdwarf_version := 20170709
+libiconv_version := 1.15
+elfutils_version := 0.173
+libdwarf_version := 20180724
 openssl_version := 1.1.0h
 
 
@@ -109,13 +108,11 @@ build/sdk-$(host_platform)-$(host_arch).tar.bz2: build/fs-tmp-$(host_platform_ar
 	mv $@.tmp $@
 
 build/fs-tmp-%/.package-stamp: \
-		build/fs-%/lib/libz.a \
 		build/fs-%/lib/pkgconfig/liblzma.pc \
 		$(unwind) \
 		$(iconv) \
 		$(elf) \
 		$(dwarf) \
-		build/fs-%/lib/pkgconfig/libffi.pc \
 		build/fs-%/lib/pkgconfig/glib-2.0.pc \
 		$(glib_tls_provider) \
 		build/fs-%/lib/pkgconfig/gee-0.8.pc \
@@ -148,85 +145,11 @@ endif
 	@touch $@
 
 
-build/.zlib-stamp:
-	$(RM) -r zlib
-	mkdir zlib
-	$(download) http://zlib.net/zlib-$(zlib_version).tar.gz | tar -C zlib -xz --strip-components 1
-	@mkdir -p $(@D)
-	@touch $@
-
-build/fs-tmp-%/zlib/Makefile: build/fs-env-%.rc build/.zlib-stamp
-	$(RM) -r $(@D)
-	mkdir -p build/fs-tmp-$*
-	cp -a zlib $(@D)
-	. $< \
-		&& export PACKAGE_TARNAME=zlib \
-		&& . $$CONFIG_SITE \
-		&& export CC CFLAGS \
-		&& case "$*" in \
-			linux-arm) \
-				export PATH="$$(dirname $$NM):$$PATH"; \
-				export CHOST="arm-linux-gnueabi"; \
-				;; \
-			linux-armhf) \
-				export PATH="$$(dirname $$NM):$$PATH"; \
-				export CHOST="arm-linux-gnueabihf"; \
-				;; \
-			linux-mips) \
-				export PATH="$$(dirname $$NM):$$PATH"; \
-				export CHOST="mips-linux"; \
-				;; \
-			linux-mipsel) \
-				export PATH="$$(dirname $$NM):$$PATH"; \
-				export CHOST="mipsel-linux"; \
-				;; \
-			android-x86) \
-				export PATH="$$(dirname $$NM):$$PATH"; \
-				export CHOST="i686-linux-android"; \
-				;; \
-			android-x86_64) \
-				export PATH="$$(dirname $$NM):$$PATH"; \
-				export CHOST="x86_64-linux-android"; \
-				;; \
-			android-arm) \
-				export PATH="$$(dirname $$NM):$$PATH"; \
-				export CHOST="arm-linux-androideabi"; \
-				;; \
-			android-arm64) \
-				export PATH="$$(dirname $$NM):$$PATH"; \
-				export CHOST="aarch64-linux-android"; \
-				;; \
-			qnx-x86) \
-				export PATH="$$(dirname $$NM):$$PATH"; \
-				export CHOST="i486-pc-nto-qnx6.6.0"; \
-				;; \
-			qnx-arm) \
-				export PATH="$$(dirname $$NM):$$PATH"; \
-				export CHOST="arm-unknown-nto-qnx6.5.0"; \
-				;; \
-			qnx-armeabi) \
-				export PATH="$$(dirname $$NM):$$PATH"; \
-				export CHOST="arm-unknown-nto-qnx6.5.0eabi"; \
-				;; \
-		esac \
-		&& cd $(@D) \
-		&& ./configure \
-			--prefix=$$frida_prefix \
-			--static
-
-build/fs-%/lib/libz.a: build/fs-env-%.rc build/fs-tmp-%/zlib/Makefile
-	. $< \
-		&& cd build/fs-tmp-$*/zlib \
-		&& make $(MAKE_J) \
-		&& make $(MAKE_J) install
-	@touch $@
-
-
 build/.libiconv-stamp:
 	$(RM) -r libiconv
 	mkdir libiconv
 	cd libiconv \
-		&& $(download) http://gnuftp.uib.no/libiconv/libiconv-$(libiconv_version).tar.gz | tar -xz --strip-components 1 \
+		&& $(download) https://gnuftp.uib.no/libiconv/libiconv-$(libiconv_version).tar.gz | tar -xz --strip-components 1 \
 		&& patch -p1 < ../releng/patches/libiconv-arm64.patch \
 		&& patch -p1 < ../releng/patches/libiconv-android.patch
 	@mkdir -p $(@D)
@@ -365,9 +288,7 @@ $(eval $(call make-git-autotools-module-rules,xz,build/fs-%/lib/pkgconfig/liblzm
 
 $(eval $(call make-git-autotools-module-rules,libunwind,build/fs-%/lib/pkgconfig/libunwind.pc,build/fs-%/lib/pkgconfig/liblzma.pc))
 
-$(eval $(call make-git-autotools-module-rules,libffi,build/fs-%/lib/pkgconfig/libffi.pc,))
-
-$(eval $(call make-git-meson-module-rules,glib,build/fs-%/lib/pkgconfig/glib-2.0.pc,build/fs-%/lib/pkgconfig/libffi.pc $(iconv) build/fs-%/lib/libz.a,$(glib_iconv_option)))
+$(eval $(call make-git-meson-module-rules,glib,build/fs-%/lib/pkgconfig/glib-2.0.pc,$(iconv),$(glib_iconv_option)))
 
 build/.openssl-stamp:
 	$(RM) -r openssl

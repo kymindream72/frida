@@ -1,12 +1,12 @@
 include config.mk
 
 MAKE_J ?= -j 8
-repo_base_url = "git://github.com/frida"
+repo_base_url = "https://github.com/frida"
 repo_suffix = ".git"
 
 m4_version := 1.4.18
 autoconf_version := 2.69
-automake_version := 1.15.1
+automake_version := 1.16.1
 libtool_version := 2.4.6
 gettext_version := 0.19.8.1
 pkg_config_version := 0.29.2
@@ -182,17 +182,17 @@ $2: build/ft-env-%.rc build/ft-tmp-%/$1/Makefile
 endef
 
 
-$(eval $(call make-tarball-module-rules,m4,http://gnuftp.uib.no/m4/m4-$(m4_version).tar.gz,build/ft-%/bin/m4,,m4-vasnprintf-apple-fix.patch))
+$(eval $(call make-tarball-module-rules,m4,https://gnuftp.uib.no/m4/m4-$(m4_version).tar.gz,build/ft-%/bin/m4,,m4-vasnprintf-apple-fix.patch))
 
-$(eval $(call make-tarball-module-rules,autoconf,http://gnuftp.uib.no/autoconf/autoconf-$(autoconf_version).tar.gz,build/ft-%/bin/autoconf,build/ft-%/bin/m4))
+$(eval $(call make-tarball-module-rules,autoconf,https://gnuftp.uib.no/autoconf/autoconf-$(autoconf_version).tar.gz,build/ft-%/bin/autoconf,build/ft-%/bin/m4))
 
-$(eval $(call make-tarball-module-rules,automake,http://gnuftp.uib.no/automake/automake-$(automake_version).tar.gz,build/ft-%/bin/automake,build/ft-%/bin/autoconf))
+$(eval $(call make-tarball-module-rules,automake,https://gnuftp.uib.no/automake/automake-$(automake_version).tar.gz,build/ft-%/bin/automake,build/ft-%/bin/autoconf))
 
 build/.libtool-stamp:
 	$(RM) -r libtool
 	mkdir -p libtool
 	cd libtool \
-		&& $(download) http://gnuftp.uib.no/libtool/libtool-$(libtool_version).tar.gz | tar -xz --strip-components 1 \
+		&& $(download) https://gnuftp.uib.no/libtool/libtool-$(libtool_version).tar.gz | tar -xz --strip-components 1 \
 		&& patch -p1 < ../releng/patches/libtool-fixes.patch \
 		&& for name in aclocal.m4 config-h.in configure Makefile.in; do \
 			find . -name $$name -exec touch '{}' \;; \
@@ -217,9 +217,7 @@ build/ft-%/bin/libtool: build/ft-env-%.rc build/ft-tmp-%/libtool/Makefile
 
 $(eval $(call make-tarball-module-rules,gettext,https://gnuftp.uib.no/gettext/gettext-$(gettext_version).tar.gz,build/ft-%/bin/autopoint,build/ft-%/bin/libtool,gettext-vasnprintf-apple-fix.patch))
 
-$(eval $(call make-git-module-rules,libffi,build/ft-%/lib/pkgconfig/libffi.pc,build/ft-%/bin/autopoint))
-
-$(eval $(call make-git-module-rules,glib,build/ft-%/bin/glib-genmarshal,build/ft-%/lib/pkgconfig/libffi.pc))
+$(eval $(call make-git-module-rules,glib,build/ft-%/bin/glib-genmarshal,build/ft-%/bin/autopoint))
 
 $(eval $(call make-tarball-module-rules,pkg-config,https://pkgconfig.freedesktop.org/releases/pkg-config-$(pkg_config_version).tar.gz,build/ft-%/bin/pkg-config,build/ft-%/bin/glib-genmarshal,pkg-config-static-glib.patch))
 
