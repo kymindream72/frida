@@ -7,6 +7,7 @@ repo_suffix = ".git"
 m4_version := 1.4.18
 autoconf_version := 2.69
 automake_version := 1.16.1
+automake_api_version := 1.16
 libtool_version := 2.4.6
 gettext_version := 0.19.8.1
 pkg_config_version := 0.29.2
@@ -120,9 +121,9 @@ build/ft-tmp-%/.package-stamp: \
 			. | tar -C $(abspath $(@D)/package) -xf -
 	cd $(abspath $(@D)/package)/bin \
 		&& for tool in aclocal automake; do \
-			rm $$tool-$(automake_version); \
-			mv $$tool $$tool-$(automake_version); \
-			ln -s $$tool-$(automake_version) $$tool; \
+			rm $$tool-$(automake_api_version); \
+			mv $$tool $$tool-$(automake_api_version); \
+			ln -s $$tool-$(automake_api_version) $$tool; \
 		done
 ifeq ($(build_platform), linux)
 		find $(abspath $(@D)/package)/bin -type f -exec sed -i'' -e "s_^#!.*python.*_#!/usr/bin/env python3_gi" {} +
