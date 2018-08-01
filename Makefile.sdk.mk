@@ -2,8 +2,8 @@ include config.mk
 
 MAKE_J ?= -j 8
 
-repo_base_url = "https://github.com/frida"
-repo_suffix := ".git"
+repo_base_url = https://github.com/frida
+repo_suffix := .git
 
 libiconv_version := 1.15
 elfutils_version := 0.173
@@ -453,31 +453,33 @@ endif
 endif
 endif
 
-build/.v8-stamp:
-	$(RM) -r v8
-	git clone $(repo_base_url)/v8$(repo_suffix)
-	@mkdir -p $(@D)
+v8-checkout/depot_tools/gclient:
+	$(RM) -r v8-checkout/depot_tools
+	git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git v8-checkout/depot_tools
+
+v8-checkout/.gclient: v8-checkout/depot_tools/gclient
+	cd v8-checkout && depot_tools/gclient config --spec 'solutions = [ \
+  { \
+    "url": "$(repo_base_url)/v8.git", \
+    "managed": False, \
+    "name": "v8", \
+    "deps_file": "DEPS", \
+    "custom_deps": {}, \
+  }, \
+] \
+'
+
+v8-checkout/v8: v8-checkout/.gclient
+	cd v8-checkout \
+		&& export PATH=$(abspath v8-checkout/depot_tools):$$PATH \
+		&& gclient sync
 	@touch $@
 
-build/fs-tmp-%/.v8-source-stamp: build/.v8-stamp
-	# Poor-man's substitute for out-of-tree builds
-	@mkdir -p $(@D)
-	$(RM) -r $(@D)/v8
-	git clone v8 $(@D)/v8
-	@touch $@
+build/fs-tmp-%/v8/build.ninja: v8-checkout/v8
+	cd v8-checkout/v8 && ../depot_tools/gn gen $(abspath $(@D)) --args='target_cpu="$(v8_arch)" is_debug=true strip_absolute_paths_from_debug_symbols=true use_goma=false use_xcode_clang=true is_component_build=false v8_monolithic=true v8_use_external_startup_data=false v8_enable_gdbjit=false v8_enable_debugging_features=false v8_enable_disassembler=false v8_enable_i18n_support=false v8_embedder_string="frida"'
 
-build/fs-tmp-%/.v8-build-stamp: build/fs-env-%.rc build/fs-tmp-%/.v8-source-stamp
-	if test -f /usr/bin/python2.7; then \
-		ln -sf /usr/bin/python2.7 $(@D)/python; \
-	else \
-		ln -sf /usr/bin/python2.6 $(@D)/python; \
-	fi
-	. $< \
-		&& cd build/fs-tmp-$*/v8 \
-		&& PATH="$(abspath $(@D)):/usr/bin:/bin:/usr/sbin:/sbin:$$PATH" \
-			$(v8_env_vars) \
-			make $(MAKE_J) $(v8_target) GYPFLAGS="$(v8_flags)"
-	@touch $@
+build/fs-tmp-%/v8/foo: build/fs-tmp-%/v8/build.ninja
+	$(NINJA) -C build/fs-tmp-$*/v8
 
 build/fs-%/lib/pkgconfig/v8.pc: build/fs-tmp-%/.v8-build-stamp
 	install -d build/fs-$*/include/v8/include
@@ -498,7 +500,7 @@ build/fs-%/lib/pkgconfig/v8.pc: build/fs-tmp-%/.v8-build-stamp
 	echo "" >> $@.tmp
 	echo "Name: V8" >> $@.tmp
 	echo "Description: V8 JavaScript Engine" >> $@.tmp
-	echo "Version: 6.2.2.0" >> $@.tmp
+	echo "Version: 7.0.110" >> $@.tmp
 	echo "Libs: -L\$${libdir} -lv8_base -lv8_snapshot -lv8_libplatform -lv8_libsampler -lv8_libbase" >> $@.tmp
 ifdef v8_libs_private
 	echo Libs.private: $(v8_libs_private) >> $@.tmp

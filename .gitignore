@@ -5,6 +5,7 @@
 /elfutils
 /gettext
 /glib
+/glib-openssl
 /ipch
 /json-glib
 /libdwarf
@@ -14,11 +15,12 @@
 /libtool
 /libunwind
 /m4
+/openssl
 /pkg-config
 /releng/modules/frida-gadget-ios/*.dylib
 /releng/modules/frida-gadget-ios/node_modules
 /stlport
-/v8
+/v8-checkout
 /vala
 /xz
 /zlib
