@@ -333,124 +333,58 @@ $(eval $(call make-git-autotools-module-rules,libgee,build/fs-%/lib/pkgconfig/ge
 $(eval $(call make-git-meson-module-rules,json-glib,build/fs-%/lib/pkgconfig/json-glib-1.0.pc,build/fs-%/lib/pkgconfig/glib-2.0.pc,-Dintrospection=false))
 
 
+v8_common_args := \
+	is_debug=true \
+	v8_optimized_debug=false \
+	v8_monolithic=true \
+	v8_use_external_startup_data=false \
+	is_component_build=false \
+	v8_enable_debugging_features=false \
+	v8_enable_disassembler=false \
+	v8_enable_gdbjit=false \
+	v8_enable_i18n_support=false \
+	strip_absolute_paths_from_debug_symbols=true \
+	use_goma=false \
+	v8_embedder_string="-frida" \
+	$(NULL)
+
 ifeq ($(host_arch), x86)
-	v8_arch := ia32
-	android_target_platform := 14
+	v8_cpu := ia32
 endif
 ifeq ($(host_arch), x86_64)
-	v8_arch := x64
-	android_target_platform := 21
+	v8_cpu := x64
 endif
 ifeq ($(host_arch), arm)
-	v8_arch := arm
-	android_target_platform := 14
-	v8_abi_flags := -D armfloatabi=softfp
+	v8_cpu := arm
+	v8_abi_args := arm_float_abi=softfp
 endif
 ifeq ($(host_arch), armeabi)
-	v8_arch := arm
-	android_target_platform := 14
-	v8_abi_flags := -D armfloatabi=softfp
+	v8_cpu := arm
+	v8_abi_args := arm_float_abi=softfp
 endif
 ifeq ($(host_arch), armhf)
-	v8_arch := arm
-	android_target_platform := 14
-	v8_abi_flags := -D armfloatabi=hard
+	v8_cpu := arm
+	v8_abi_args := arm_float_abi=hard
 endif
 ifeq ($(host_arch), arm64)
-	v8_arch := arm64
-	android_target_platform := 21
+	v8_cpu := arm64
 endif
 
 v8_build_platform := $(shell echo $(build_platform) | sed 's,^macos$$,mac,')
 ifeq ($(build_platform), macos)
-	v8_build_flags := -D clang_xcode=1
+	v8_platform_args := use_xcode_clang=true
+endif
+ifeq ($(host_platform), macos)
+	v8_platform_args := mac_deployment_target="10.9.0"
+endif
+ifeq ($(host_platform), ios)
+	v8_platform_args := mac_deployment_target="10.9.0" ios_deployment_target="7.0"
 endif
 ifeq ($(host_platform), linux)
-	v8_host_flags := -f make-linux -D clang=0 -D host_clang=0 -D linux_use_bundled_binutils=0 -D linux_use_bundled_gold=0 -D linux_use_gold_flags=0
 	v8_libs_private := "-lrt"
 endif
 ifeq ($(host_platform), android)
-	v8_flavor_prefix := android_
-	v8_host_flags := -f make-android -D android_ndk_root=$(ANDROID_NDK_ROOT) -D android_sysroot=$(ANDROID_NDK_ROOT) -D android_target_platform=$(android_target_platform) -D clang=1
 	v8_libs_private := "-llog -lm"
-endif
-ifeq ($(host_platform), macos)
-	v8_host_flags := -f make-mac -D mac_deployment_target=10.9 -D clang=1
-endif
-ifeq ($(host_platform), ios)
-	v8_host_flags := -f make-mac -D mac_deployment_target=10.9 -D ios_deployment_target=7.0 -D clang=1 -D want_separate_host_toolset=1
-endif
-v8_flags := -D host_os=$(v8_build_platform) -D werror='' -D v8_use_external_startup_data=0 -D v8_enable_gdbjit=0 -D v8_enable_i18n_support=0 -D v8_enable_inspector=1 $(v8_host_flags) $(v8_build_flags) $(v8_abi_flags)
-
-v8_target := $(v8_flavor_prefix)$(v8_arch).release
-
-ifeq ($(build_platform), macos)
-ifeq ($(host_platform), macos)
-	v8_env_vars := \
-		MACOSX_DEPLOYMENT_TARGET="" \
-		CXX="$$CXX -stdlib=libc++" \
-		CXX_host="$$CXX -stdlib=libc++" \
-		CXX_target="$$CXX -stdlib=libc++" \
-		LINK="$$CXX -stdlib=libc++"
-endif
-ifeq ($(host_platform), ios)
-	macos_sdk_path := $$(xcrun --sdk macosx --show-sdk-path)
-	v8_env_vars := \
-		GYP_CROSSCOMPILE=1 \
-		MACOSX_DEPLOYMENT_TARGET="" \
-		CXX="$$CXX -stdlib=libc++" \
-		CXX_host="$$(xcrun --sdk macosx -f clang++) -isysroot $(macos_sdk_path) -stdlib=libc++" \
-		CXX_target="$$CXX -stdlib=libc++" \
-		LINK="$$CXX -stdlib=libc++" \
-		LINK_host="$$(xcrun --sdk macosx -f clang++) -isysroot $(macos_sdk_path) -stdlib=libc++"
-endif
-ifeq ($(host_platform), android)
-	macos_sdk_path := $$(xcrun --sdk macosx --show-sdk-path)
-	v8_env_vars := \
-		MACOSX_DEPLOYMENT_TARGET="" \
-		CXX="$$CXX" \
-		CXX_host="$$(xcrun --sdk macosx -f clang++) -isysroot $(macos_sdk_path) -stdlib=libc++" \
-		CXX_target="$$CXX" \
-		LINK="$$CXX" \
-		LINK_host="$$(xcrun --sdk macosx -f clang++) -isysroot $(macos_sdk_path) -stdlib=libc++" \
-		CFLAGS="" \
-		CXXFLAGS="" \
-		CPPFLAGS="" \
-		LDFLAGS=""
-endif
-else
-ifeq ($(build_platform), linux)
-ifeq ($(host_platform_arch), linux-arm)
-	v8_env_vars := \
-		CXX="$$CXX" \
-		CXX_host="g++ -m32" \
-		CXX_target="$$CXX" \
-		LINK="$$CXX" \
-		LINK_host="g++ -m32" \
-		CFLAGS="$$CFLAGS" \
-		LDFLAGS="$$LDFLAGS" \
-		CXXFLAGS="$$CXXFLAGS" \
-		CPPFLAGS="$$CPPFLAGS"
-else
-ifeq ($(host_platform_arch), linux-armhf)
-	v8_env_vars := \
-		CXX="$$CXX" \
-		CXX_host="g++ -m32" \
-		CXX_target="$$CXX" \
-		LINK="$$CXX" \
-		LINK_host="g++ -m32" \
-		CFLAGS="$$CFLAGS" \
-		LDFLAGS="$$LDFLAGS" \
-		CXXFLAGS="$$CXXFLAGS" \
-		CPPFLAGS="$$CPPFLAGS"
-else
-	v8_env_vars := \
-		CXX_host="$$CXX" \
-		CXX_target="$$CXX" \
-		LINK="$$CXX"
-endif
-endif
-endif
 endif
 
 v8-checkout/depot_tools/gclient:
@@ -476,22 +410,19 @@ v8-checkout/v8: v8-checkout/.gclient
 	@touch $@
 
 build/fs-tmp-%/v8/build.ninja: v8-checkout/v8
-	cd v8-checkout/v8 && ../depot_tools/gn gen $(abspath $(@D)) --args='target_cpu="$(v8_arch)" is_debug=true strip_absolute_paths_from_debug_symbols=true use_goma=false use_xcode_clang=true is_component_build=false v8_monolithic=true v8_use_external_startup_data=false v8_enable_gdbjit=false v8_enable_debugging_features=false v8_enable_disassembler=false v8_enable_i18n_support=false v8_embedder_string="-frida"'
+	cd v8-checkout/v8 && ../depot_tools/gn gen $(abspath $(@D)) --args='target_cpu="$(v8_cpu)" $(v8_abi_args) $(v8_common_args) $(v8_platform_args)'
 
 build/fs-tmp-%/v8/obj/libv8_monolith.a: build/fs-tmp-%/v8/build.ninja
-	$(NINJA) -C build/fs-tmp-$*/v8
+	$(NINJA) -C build/fs-tmp-$*/v8 v8_monolith
+	@touch $@
 
-build/fs-%/lib/pkgconfig/v8.pc: build/fs-tmp-%/.v8-build-stamp
+build/fs-%/lib/pkgconfig/v8.pc: build/fs-tmp-%/v8/obj/libv8_monolith.a
 	install -d build/fs-$*/include/v8/include
-	install -m 644 v8/include/*.h build/fs-$*/include/v8/include
+	install -m 644 v8-checkout/v8/include/*.h build/fs-$*/include/v8/include/
 	install -d build/fs-$*/include/v8/include/libplatform
-	install -m 644 v8/include/libplatform/*.h build/fs-$*/include/v8/include/libplatform
+	install -m 644 v8-checkout/v8/include/libplatform/*.h build/fs-$*/include/v8/include/libplatform/
 	install -d build/fs-$*/lib
-	install -m 644 build/fs-tmp-$*/v8/out/$(v8_target)/libv8_libbase.a build/fs-$*/lib
-	install -m 644 build/fs-tmp-$*/v8/out/$(v8_target)/libv8_base.a build/fs-$*/lib
-	install -m 644 build/fs-tmp-$*/v8/out/$(v8_target)/libv8_libplatform.a build/fs-$*/lib
-	install -m 644 build/fs-tmp-$*/v8/out/$(v8_target)/libv8_libsampler.a build/fs-$*/lib
-	install -m 644 build/fs-tmp-$*/v8/out/$(v8_target)/libv8_snapshot.a build/fs-$*/lib
+	install -m 644 $< build/fs-$*/lib/
 	install -d $(@D)
 	echo "prefix=\$${frida_sdk_prefix}" > $@.tmp
 	echo "exec_prefix=\$${prefix}" >> $@.tmp
@@ -501,7 +432,7 @@ build/fs-%/lib/pkgconfig/v8.pc: build/fs-tmp-%/.v8-build-stamp
 	echo "Name: V8" >> $@.tmp
 	echo "Description: V8 JavaScript Engine" >> $@.tmp
 	echo "Version: 7.0.110" >> $@.tmp
-	echo "Libs: -L\$${libdir} -lv8_base -lv8_snapshot -lv8_libplatform -lv8_libsampler -lv8_libbase" >> $@.tmp
+	echo "Libs: -L\$${libdir} -lv8_monolith" >> $@.tmp
 ifdef v8_libs_private
 	echo Libs.private: $(v8_libs_private) >> $@.tmp
 endif
