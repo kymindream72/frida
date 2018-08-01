@@ -476,9 +476,9 @@ v8-checkout/v8: v8-checkout/.gclient
 	@touch $@
 
 build/fs-tmp-%/v8/build.ninja: v8-checkout/v8
-	cd v8-checkout/v8 && ../depot_tools/gn gen $(abspath $(@D)) --args='target_cpu="$(v8_arch)" is_debug=true strip_absolute_paths_from_debug_symbols=true use_goma=false use_xcode_clang=true is_component_build=false v8_monolithic=true v8_use_external_startup_data=false v8_enable_gdbjit=false v8_enable_debugging_features=false v8_enable_disassembler=false v8_enable_i18n_support=false v8_embedder_string="frida"'
+	cd v8-checkout/v8 && ../depot_tools/gn gen $(abspath $(@D)) --args='target_cpu="$(v8_arch)" is_debug=true strip_absolute_paths_from_debug_symbols=true use_goma=false use_xcode_clang=true is_component_build=false v8_monolithic=true v8_use_external_startup_data=false v8_enable_gdbjit=false v8_enable_debugging_features=false v8_enable_disassembler=false v8_enable_i18n_support=false v8_embedder_string="-frida"'
 
-build/fs-tmp-%/v8/foo: build/fs-tmp-%/v8/build.ninja
+build/fs-tmp-%/v8/obj/libv8_monolith.a: build/fs-tmp-%/v8/build.ninja
 	$(NINJA) -C build/fs-tmp-$*/v8
 
 build/fs-%/lib/pkgconfig/v8.pc: build/fs-tmp-%/.v8-build-stamp
